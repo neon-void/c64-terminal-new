@@ -1,0 +1,5 @@
+# Run TypeScript type check
+npx tsc --noEmit
+
+# Run lint-staged for ESLint and Prettier
+npx lint-staged

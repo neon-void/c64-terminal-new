@@ -1,0 +1,11 @@
+version: "3.8"
+
+services:
+  c64-terminal:
+    image: c64-terminal-server
+    ports:
+      - "10000:10000"
+      - "9000:9000"
+    env_file:
+      - .env
+    restart: unless-stopped

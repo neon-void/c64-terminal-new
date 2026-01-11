@@ -1,0 +1,82 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t c64-terminal-server .
+          docker save c64-terminal-server | gzip > c64-terminal-server.tar.gz
+
+      - name: Copy files to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: "c64-terminal-server.tar.gz,docker-compose.prod.yml"
+          target: /home/c64terminal/
+
+      - name: Deploy on droplet
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          PUSHER_KEY: ${{ secrets.PUSHER_KEY }}
+          PUSHER_CLUSTER: ${{ secrets.PUSHER_CLUSTER }}
+          PUSHER_CHANNEL: ${{ secrets.PUSHER_CHANNEL }}
+          ALLOWED_IPS: ${{ secrets.ALLOWED_IPS }}
+          LOKI_URL: ${{ secrets.LOKI_URL }}
+          LOKI_USER: ${{ secrets.LOKI_USER }}
+          LOKI_TOKEN: ${{ secrets.LOKI_TOKEN }}
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: root
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          envs: PUSHER_KEY,PUSHER_CLUSTER,PUSHER_CHANNEL,ALLOWED_IPS,LOKI_URL,LOKI_USER,LOKI_TOKEN
+          script: |
+            cd /home/c64terminal
+
+            # Create .env file
+            cat > .env << EOF
+            PUSHER_KEY=${PUSHER_KEY}
+            PUSHER_CLUSTER=${PUSHER_CLUSTER}
+            PUSHER_CHANNEL=${PUSHER_CHANNEL}
+            TCP_PORT=10000
+            API_PORT=9000
+            ALLOWED_IPS=${ALLOWED_IPS}
+            LOKI_URL=${LOKI_URL}
+            LOKI_USER=${LOKI_USER}
+            LOKI_TOKEN=${LOKI_TOKEN}
+            LOKI_JOB=c64-terminal-server
+            NODE_ENV=production
+            EOF
+
+            # Stop existing container
+            docker-compose -f docker-compose.prod.yml down || true
+
+            # Remove old images
+            docker image prune -af || true
+
+            # Load new image
+            docker load -i c64-terminal-server.tar.gz
+
+            # Start new container
+            docker-compose -f docker-compose.prod.yml up -d
+
+            # Cleanup
+            rm -f c64-terminal-server.tar.gz
+
+            # Show status
+            docker ps
