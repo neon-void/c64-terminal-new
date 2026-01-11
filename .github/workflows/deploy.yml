@@ -46,7 +46,8 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t c64-terminal-server .
+          VERSION=$(git rev-parse --short=4 HEAD)
+          docker build --build-arg APP_VERSION=$VERSION -t c64-terminal-server .
           docker save c64-terminal-server | gzip > c64-terminal-server.tar.gz
 
       - name: Copy files to droplet

@@ -21,6 +21,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Version from git commit
+ARG APP_VERSION=0000
+ENV APP_VERSION=${APP_VERSION}
+
 # Copy package files
 COPY package*.json ./
 

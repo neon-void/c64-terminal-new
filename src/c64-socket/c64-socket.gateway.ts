@@ -104,7 +104,8 @@ export class C64SocketGateway implements OnModuleInit, OnModuleDestroy {
 
     // Send welcome message after a short delay
     setTimeout(() => {
-      const welcomeMessage = this.messageService.getWelcomeMessage('0001');
+      const version = this.configService.get<string>('APP_VERSION', '0000');
+      const welcomeMessage = this.messageService.getWelcomeMessage(version);
       this.sessionManager.addToBuffer(address, welcomeMessage);
     }, 500);
 

@@ -1,10 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { C64SocketGateway } from '../c64-socket/c64-socket.gateway';
 import { PusherService } from '../pusher/pusher.service';
 
 @Controller()
 export class ApiController {
   constructor(
+    private readonly configService: ConfigService,
     private readonly c64Gateway: C64SocketGateway,
     private readonly pusherService: PusherService,
   ) {}
@@ -17,7 +19,7 @@ export class ApiController {
       uptime: this.c64Gateway.getUptime(),
       clients: this.c64Gateway.getClientCount(),
       messages: this.pusherService.messageCount,
-      version: '0001',
+      version: this.configService.get<string>('APP_VERSION', '0000'),
       pusher: {
         connected: this.pusherService.isConnected,
         connecting: this.pusherService.isConnecting,
