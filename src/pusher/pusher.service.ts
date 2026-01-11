@@ -187,13 +187,18 @@ export class PusherService implements OnModuleInit, OnModuleDestroy {
   private startHealthCheck(): void {
     // Check every 30 seconds
     this.healthCheckInterval = setInterval(() => {
-      // If no activity for 5 minutes, reconnect
-      if (this._isConnected && this._lastActivity) {
-        const timeSinceActivity = Date.now() - this._lastActivity.getTime();
-        if (timeSinceActivity > 5 * 60 * 1000) {
-          this.logger.warn('No Pusher activity for 5 minutes, reconnecting...');
+      // Check Pusher's actual connection state
+      const actualState = this.client?.connection?.state;
+
+      // Sync our state with Pusher's actual state
+      if (actualState === 'connected' && !this._isConnected) {
+        this._isConnected = true;
+        this._isConnecting = false;
+      } else if (actualState !== 'connected' && actualState !== 'connecting') {
+        if (this._isConnected) {
+          this.logger.warn(`Pusher state is "${actualState}", reconnecting...`);
           this._isConnected = false;
-          this.scheduleReconnect();
+          this._isConnecting = false;
         }
       }
 
